@@ -4,16 +4,9 @@ pipeline {
     environment {
         DOCKER_REGISTRY = "nexus:8081"                       // Replace with your Nexus server URL
         DOCKER_REPO = "docker-repo"                          // Replace with your Nexus repository name
-        IMAGE_NAME = "custom-httpd"                          // Replace with your image name
+        IMAGE_NAME = "back-httpd"                          // Replace with your image name
         NEXUS_CREDENTIALS = credentials('nexusCredentials')  // Nexus credentials ID in Jenkins
     }
-
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
 
         stage('Build Docker Image') {
             steps {
