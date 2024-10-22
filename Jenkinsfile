@@ -1,45 +1,58 @@
 pipeline {
-    agent { docker { image 'python:latest' } }
+    agent any
+
     environment {
-      PROJECT_NAME = "pipeline-test"
-      OWNER_NAME   = "Roman Yadzhak"
+        DOCKER_REGISTRY = "nexus:8081"                       // Replace with your Nexus server URL
+        DOCKER_REPO = "docker-repo"                          // Replace with your Nexus repository name
+        IMAGE_NAME = "custom-httpd"                          // Replace with your image name
+        NEXUS_CREDENTIALS = credentials('nexusCredentials')  // Nexus credentials ID in Jenkins
     }
 
     stages {
-        
-        stage('1-Build') {
+        stage('Checkout') {
             steps {
-                echo "Start of Stage Build..."
-                echo "Building......."
-                echo "End of Stage Build..."
+                checkout scm
             }
         }
-        stage('2-Test') {
+
+        stage('Build Docker Image') {
             steps {
-                echo "Start of Stage Test..."
-                echo "Testing......."
-                echo "Hello ${PROJECT_NAME}"
-                echo "Owner is ${OWNER_NAME}"
-                echo "End of Stage Build..."
+                script {
+                    dockerImage = docker.build("${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:${env.BUILD_NUMBER}")
+                }
             }
         }
-        stage('3-Deploy') {
+
+        stage('Login to Nexus') {
             steps {
-                echo "Start of Stage Deploy..."
-                echo "Deploying......."
-                sh "ls -la"
-                sh '''
-                   echo "Line1"
-                   echo "Line2"
-                '''
-                sh "python --version"
-                echo "End of Stage Build..."
+                script {
+                    sh "docker login -u ${NEXUS_CREDENTIALS_USR} -p ${NEXUS_CREDENTIALS_PSW} ${DOCKER_REGISTRY}"
+                }
             }
         }
-        stage('4-Celebrate') {
+
+        stage('Push Docker Image') {
             steps {
-                echo "SUCCESS!"
+                script {
+                    dockerImage.push()
+                    dockerImage.push('latest')                        // Optionally push with the latest tag
+                }
             }
-        }	
+        }
+
+        stage('Cleanup') {
+            steps {
+                script {
+                    sh "docker rmi ${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:${env.BUILD_NUMBER}"
+                    sh "docker rmi ${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:latest"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
     }
 }
