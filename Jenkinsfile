@@ -9,24 +9,23 @@ pipeline {
         VERSION = "1.1.0"
     }
 
-        stages {
-            stage('Build Docker Image') {
-                steps {
-                    script {
-                        // List files in the workspace
-                        sh 'ls -la'
+    stages {
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // List files in the workspace
+                    sh 'ls -la'
                 
-                        // Build the Docker image
-                        sh "docker build -t ${IMAGE_NAME}:${VERSION} ."
-                    }
+                    // Build the Docker image
+                    sh "docker build -t ${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:${VERSION} ."
                 }
             }
         }
-    
+
         stage('Login to Nexus') {
             steps {
                 script {
-                    sh "docker login -u ${NEXUS_CREDENTIALS_USR} -p ${NEXUS_CREDENTIALS_PSW} ${DOCKER_REGISTRY}"
+                    sh "docker login -u ${NEXUS_CREDENTIALS.username} -p ${NEXUS_CREDENTIALS.password} ${DOCKER_REGISTRY}"
                 }
             }
         }
@@ -34,8 +33,12 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
-                    dockerImage.push()
-                    dockerImage.push('latest') // Optionally push with the latest tag
+                    // Define dockerImage variable after building the image
+                    def dockerImage = "${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:${VERSION}"
+                    
+                    // Push the Docker image
+                    sh "docker push ${dockerImage}"
+                    sh "docker push ${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:latest" // Optionally push with the latest tag
                 }
             }
         }
@@ -43,7 +46,7 @@ pipeline {
         stage('Cleanup') {
             steps {
                 script {
-                    sh "docker rmi ${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:${env.BUILD_NUMBER} || true"
+                    sh "docker rmi ${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:${VERSION} || true"
                     sh "docker rmi ${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:latest || true"
                 }
             }
