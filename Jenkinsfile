@@ -6,17 +6,23 @@ pipeline {
         DOCKER_REPO = "docker-repo"                          // Replace with your Nexus repository name
         IMAGE_NAME = "back-httpd"                            // Replace with your image name
         NEXUS_CREDENTIALS = credentials('nexusCredentials')  // Nexus credentials ID in Jenkins
+        VERSION = "1.1.0"
     }
 
-    stages {
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    dockerImage = docker.build("${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:${env.BUILD_NUMBER}")
+        stages {
+            stage('Build Docker Image') {
+                steps {
+                    script {
+                        // List files in the workspace
+                        sh 'ls -la'
+                
+                        // Build the Docker image
+                        sh "docker build -t ${IMAGE_NAME}:${VERSION} ."
+                    }
                 }
             }
         }
-
+    
         stage('Login to Nexus') {
             steps {
                 script {
