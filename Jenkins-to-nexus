@@ -1,0 +1,67 @@
+pipeline {
+    agent { label 'local-agent' }  // Specify the local agent
+
+    environment {
+        DOCKER_IMAGE_NAME = 'httpd'
+        DOCKER_IMAGE_VERSION = "${env.BUILD_NUMBER}"  // Use job number as the image version/tag
+        NEXUS_URL = '192.168.1.72:8082/repository/docker-host/'
+    }
+
+    stages {
+        stage('List Files') {
+            steps {
+                sh 'ls -la'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                // Create a dynamic tag for the Docker image
+                script {
+                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                    sh "docker build -t ${dockerImageTag} ."
+                }
+            }
+        }
+
+        stage('Send Image to Nexus') {
+            steps {
+                script {
+                    // Use credentials stored in Jenkins
+                    withCredentials([usernamePassword(credentialsId: 'nexusCredential', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                        // Login to Nexus Docker registry
+                        sh "echo ${NEXUS_PASSWORD} | docker login ${NEXUS_URL} -u ${NEXUS_USERNAME} --password-stdin"
+                        
+                        // Tag the image with the Nexus repository
+                        def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                        sh "docker tag ${dockerImageTag} ${NEXUS_URL}${dockerImageTag}"
+                        
+                        // Push the image to the Nexus repository
+                        sh "docker push ${NEXUS_URL}${dockerImageTag}"
+                    }
+                }
+            }
+        }
+
+        stage('Show Docker Images') {
+            steps {
+                sh 'docker images'
+            }
+        }
+
+        stage('Remove Docker Image') {
+            steps {
+                script {
+                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                    sh "docker rmi ${dockerImageTag}"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline completed.'
+        }
+    }
+}
