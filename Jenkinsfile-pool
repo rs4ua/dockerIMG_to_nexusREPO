@@ -64,15 +64,15 @@ pipeline {
             }
         }
 
-        stage('Stop and Remove Old Container') {
-            steps {
-                script {
-                    // Stop and remove the old container if it exists
-                    sh "docker stop my-httpd || true"
-                    sh "docker rm my-httpd || true"
-                }
-            }
-        }
+//        stage('Stop and Remove Old Container') {
+//            steps {
+//                script {
+//                    // Stop and remove the old container if it exists
+//                    sh "docker stop my-httpd || true"
+//                    sh "docker rm my-httpd || true"
+//                }
+//            }
+//        }
 
         stage('Run Docker Container from Nexus Image') {
             steps {
