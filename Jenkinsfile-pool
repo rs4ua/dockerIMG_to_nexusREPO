@@ -20,6 +20,7 @@ pipeline {
                         
                         // Build and push the image to Nexus
                         sh """
+                          docker build -t ${nexusImageTag} .
                           docker build -t ${dockerImageTag} .
                           docker tag ${dockerImageTag} ${nexusImageTag}
                           docker push ${nexusImageTag}
@@ -70,7 +71,7 @@ pipeline {
                     def nexusImageTag = "${NEXUS_URL}${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
                     
                     // Run the pulled image
-                    sh "docker run -d --name my-httpd-container -p 83:80 ${nexusImageTag}"
+                    sh "docker run -d --name my-httpd -p 83:80 ${nexusImageTag}"
                 }
             }
         }
@@ -80,7 +81,7 @@ pipeline {
         always {
             echo 'Pipeline completed.'
             // Optionally, clean up any containers still running
-            sh 'docker rm -f my-httpd-container || true'
+            // sh 'docker rm -f my-httpd-container || true'
         }
     }
 }
