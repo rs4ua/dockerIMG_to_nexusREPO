@@ -48,7 +48,7 @@ pipeline {
                     def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
                     
                     // Remove local image
-                    sh "docker rmi ${dockerImageTag} ${NEXUS_URL}/${NEXUS_REPOSITORY}/${dockerImageTag}"
+                    sh "docker rmi ${dockerImageTag}"
                 }
             }
         }
@@ -56,7 +56,7 @@ pipeline {
         stage('Remove Previous Docker Image') {
             steps {
                 script {
-                    def previousNexusImageTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${previousDockerImageTag}"
+                    def previousNexusImageTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${PREVIOUS_DOCKER_IMAGE_VERSION}"
 
                     sh "docker rmi ${previousNexusImageTag} || true"
                 }
