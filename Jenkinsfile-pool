@@ -54,17 +54,18 @@ pipeline {
                }
             }
         }
-//
-//        stage('Remove Previous Docker Image') {
-//            steps {
-//                script {
-//                    def previousNexusImageTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${PREVIOUS_DOCKER_IMAGE_VERSION}"
-//
-//                    sh "docker rmi ${previousNexusImageTag} || true"
-//                }
-//            }
-//        }
-//
+
+        stage('Remove Previous Docker Image') {
+            steps {
+                script {
+                    def dockerPreviosImageTag = "${DOCKER_IMAGE_NAME}:${PREVIOUS_DOCKER_IMAGE_VERSION}"
+                    def previousNexusImageTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${dockerPreviosImageTag}"
+
+                    sh "docker rmi ${previousNexusImageTag} || true"
+                }
+            }
+        }
+
         stage('Pull Image from Nexus') {
             steps {
                 script {
