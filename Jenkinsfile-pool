@@ -47,6 +47,12 @@ pipeline {
             }
         }
 
+        stage('Show Docker Images after RM') {
+            steps {
+                sh 'docker images'
+            }
+        }
+
         stage('Pull Image from Nexus') {
             steps {
                 script {
