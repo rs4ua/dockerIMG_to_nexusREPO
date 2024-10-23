@@ -47,7 +47,7 @@ pipeline {
                     // Stop and remove the old container if it exists
                     sh "docker stop my-httpd || true"
                     sh "docker rm my-httpd || true"
-                    sh "docker rmi 192.168.1.72:8082/repository/docker-host/httpd || true"
+                    sh "docker rmi ${NEXUS_URL}${DOCKER_IMAGE_NAME} || true"
                 }
             }
         }
