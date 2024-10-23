@@ -21,8 +21,8 @@ pipeline {
                         // Build and push the image to Nexus
                         sh """
                           docker build -t ${nexusImageTag} .
-                          docker build -t ${dockerImageTag} .
-                          docker tag ${dockerImageTag} ${nexusImageTag}
+                          // docker build -t ${dockerImageTag} .
+                          // docker tag ${dockerImageTag} ${nexusImageTag}
                           docker push ${nexusImageTag}
                         """
                     }
