@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE_NAME = 'httpd'
-        DOCKER_IMAGE_VERSION = "1.0-${env.BUILD_NUMBER}"          // Use job number as the image version/tag
+        DOCKER_IMAGE_VERSION = "1.${env.BUILD_NUMBER}"          // Use job number as the image version/tag
         NEXUS_URL = '192.168.1.72:8082/repository/docker-host/'
     }
 
