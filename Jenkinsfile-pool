@@ -4,11 +4,27 @@ pipeline {
     environment {
         DOCKER_IMAGE_NAME = 'httpd'
         DOCKER_IMAGE_VERSION = "1.${env.BUILD_NUMBER}"
+        PREVIOUS_DOCKER_IMAGE_VERSION = "1.${env.BUILD_NUMBER.toInteger() - 1}"
         NEXUS_URL = '192.168.1.72:8082'
         NEXUS_REPOSITORY = 'repository/docker-host'
     }
 
     stages {
+        stage('Remove Previous Docker Image') {
+            steps {
+                script {
+                    def previousDockerImageTag = "${DOCKER_IMAGE_NAME}:${PREVIOUS_DOCKER_IMAGE_VERSION}"
+                    def previousNexusImageTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${previousDockerImageTag}"
+
+                    // Attempt to remove the previous image if it exists
+                    sh """
+                      docker rmi ${previousDockerImageTag} || true
+                      docker rmi ${previousNexusImageTag} || true
+                    """
+                }
+            }
+        }
+
         stage('Create and Send Docker Image to Nexus') {
             steps {
                 script {
