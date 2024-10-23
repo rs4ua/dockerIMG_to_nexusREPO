@@ -42,16 +42,16 @@ pipeline {
 //            }
 //        }
 //
-//        stage('Remove Docker Image from Local Repository') {
-//           steps {
-//                script {
-//                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
-//                    
-//                    // Remove local image
-//                    sh "docker rmi ${dockerImageTag}"
-//               }
-//            }
-//        }
+        stage('Remove Docker Image from Local Repository') {
+           steps {
+                script {
+                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                    
+                    // Remove local image
+                    sh "docker rmi ${dockerImageTag}"
+               }
+            }
+        }
 //
 //        stage('Remove Previous Docker Image') {
 //            steps {
