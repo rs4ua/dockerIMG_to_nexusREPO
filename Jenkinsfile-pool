@@ -32,59 +32,59 @@ pipeline {
             }
         }
 
-        stage('Stop and Remove Old Container and Image') {
-            steps {
-                script {
-                    // Stop and remove the old container if it exists
-                    sh "docker stop my-httpd || true"
-                    sh "docker rm my-httpd || true"
-                }
-            }
-        }
+//        stage('Stop and Remove Old Container and Image') {
+//            steps {
+//                script {
+//                    // Stop and remove the old container if it exists
+//                    sh "docker stop my-httpd || true"
+//                    sh "docker rm my-httpd || true"
+//                }
+//            }
+//        }
+//
+//        stage('Remove Docker Image from Local Repository') {
+ //           steps {
+//                script {
+//                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+//                    
+//                    // Remove local image
+//                    sh "docker rmi ${dockerImageTag}"
+ //               }
+//            }
+//        }
+//
+//        stage('Remove Previous Docker Image') {
+//            steps {
+//                script {
+//                    def previousNexusImageTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${PREVIOUS_DOCKER_IMAGE_VERSION}"
+//
+//                    sh "docker rmi ${previousNexusImageTag} || true"
+//                }
+//            }
+//        }
 
-        stage('Remove Docker Image from Local Repository') {
-            steps {
-                script {
-                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
-                    
-                    // Remove local image
-                    sh "docker rmi ${dockerImageTag}"
-                }
-            }
-        }
-
-        stage('Remove Previous Docker Image') {
-            steps {
-                script {
-                    def previousNexusImageTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${PREVIOUS_DOCKER_IMAGE_VERSION}"
-
-                    sh "docker rmi ${previousNexusImageTag} || true"
-                }
-            }
-        }
-
-        stage('Pull Image from Nexus') {
-            steps {
-                script {
-                    def nexusRepositoryTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
-                    
-                    // Pull the image from Nexus
-                    sh "docker pull ${nexusRepositoryTag}"
-                }
-            }
-        }
-
-        stage('Run Docker Container from Nexus Image') {
-            steps {
-                script {
-                    def nexusRepositoryTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
-                    
-                    // Run the pulled image
-                    sh "docker run -d --name my-httpd -p 83:80 ${nexusRepositoryTag}"
-                }
-            }
-        }
-    }
+//        stage('Pull Image from Nexus') {
+//            steps {
+//                script {
+//                   def nexusRepositoryTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+//                    
+//                    // Pull the image from Nexus
+//                    sh "docker pull ${nexusRepositoryTag}"
+//                }
+//            }
+//        }
+//
+//        stage('Run Docker Container from Nexus Image') {
+//            steps {
+//                script {
+//                    def nexusRepositoryTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+ //                   
+//                    // Run the pulled image
+//                    sh "docker run -d --name my-httpd -p 83:80 ${nexusRepositoryTag}"
+//                }
+//            }
+//        }
+//    }
 
     post {
         always {
