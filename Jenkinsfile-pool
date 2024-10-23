@@ -52,7 +52,7 @@ pipeline {
                     sh "docker pull ${nexusImageTag}"
                     
                     // Run the pulled image
-                    sh "docker run -d --name my-httpd-container -p 8080:80 ${nexusImageTag}"
+                    sh "docker run -d --name my-httpd-container -p 83:80 ${nexusImageTag}"
                 }
             }
         }
