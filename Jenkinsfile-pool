@@ -1,0 +1,78 @@
+pipeline {
+    agent { label 'local-agent' }   // Specify the local agent
+
+    environment {
+        DOCKER_IMAGE_NAME = 'httpd'
+        DOCKER_IMAGE_VERSION = "1.${env.BUILD_NUMBER}"  // Use build number as the version/tag
+        NEXUS_URL = '192.168.1.72:8082/repository/docker-host/'
+    }
+
+    stages {
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                    sh "docker build -t ${dockerImageTag} ."
+                }
+            }
+        }
+
+        stage('Send Image to Nexus') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'nexusCredential', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                        // Login to Nexus Docker registry
+                        sh "echo ${NEXUS_PASSWORD} | docker login ${NEXUS_URL} -u ${NEXUS_USERNAME} --password-stdin"
+                        
+                        // Tag and push the image to Nexus
+                        def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                        def nexusImageTag = "${NEXUS_URL}${dockerImageTag}"
+                        sh """
+                            docker tag ${dockerImageTag} ${nexusImageTag}
+                            docker push ${nexusImageTag}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Show Docker Images') {
+            steps {
+                sh 'docker images'
+            }
+        }
+
+        stage('Run Docker Image from Nexus') {
+            steps {
+                script {
+                    def nexusImageTag = "${NEXUS_URL}${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                    
+                    // Pull the image from Nexus
+                    sh "docker pull ${nexusImageTag}"
+                    
+                    // Run the pulled image
+                    sh "docker run -d --name my-httpd-container -p 8080:80 ${nexusImageTag}"
+                }
+            }
+        }
+
+        stage('Remove Created Docker Image') {
+            steps {
+                script {
+                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                    def nexusImageTag = "${NEXUS_URL}${dockerImageTag}"
+                    sh """
+                        docker rmi ${dockerImageTag} ${nexusImageTag}
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline completed.'
+        }
+    }
+}
