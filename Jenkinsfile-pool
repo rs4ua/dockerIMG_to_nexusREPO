@@ -4,7 +4,8 @@ pipeline {
     environment {
         DOCKER_IMAGE_NAME = 'httpd'
         DOCKER_IMAGE_VERSION = "1.${env.BUILD_NUMBER}"
-        NEXUS_URL = '192.168.1.72:8082/repository/docker-host/'
+        NEXUS_URL = '192.168.1.72:8082'
+        NEXUS_REPOSITORY = 'repository/docker-host'
     }
 
     stages {
@@ -13,7 +14,7 @@ pipeline {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'nexusCredential', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
                         def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
-                        def nexusImageTag = "${NEXUS_URL}${dockerImageTag}"
+                        def nexusRepositoryTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${dockerImageTag}"
                         
                         // Login to Nexus Docker registry
                         sh "echo ${NEXUS_PASSWORD} | docker login ${NEXUS_URL} -u ${NEXUS_USERNAME} --password-stdin"
@@ -21,22 +22,10 @@ pipeline {
                         // Build and push the image to Nexus
                         sh """
                           docker build --no-cache -t ${dockerImageTag} .
-                          docker tag ${dockerImageTag} ${nexusImageTag}
-                          docker push ${nexusImageTag}
+                          docker tag ${dockerImageTag} ${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}
+                          docker push ${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}
                         """
                     }
-                }
-            }
-        }
-
-        stage('Remove Docker Image from Local Repository') {
-            steps {
-                script {
-                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
-                    def nexusImageTag = "${NEXUS_URL}${dockerImageTag}"
-                    
-                    // Remove local image
-                    sh "docker rmi ${dockerImageTag} ${nexusImageTag}"
                 }
             }
         }
@@ -47,7 +36,17 @@ pipeline {
                     // Stop and remove the old container if it exists
                     sh "docker stop my-httpd || true"
                     sh "docker rm my-httpd || true"
-                    sh "docker rmi ${NEXUS_URL}${DOCKER_IMAGE_NAME} || true"
+                }
+            }
+        }
+
+        stage('Remove Docker Image from Local Repository') {
+            steps {
+                script {
+                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                    
+                    // Remove local image
+                    sh "docker rmi ${dockerImageTag} ${NEXUS_URL}/${NEXUS_REPOSITORY}/${dockerImageTag}"
                 }
             }
         }
@@ -55,10 +54,10 @@ pipeline {
         stage('Pull Image from Nexus') {
             steps {
                 script {
-                    def nexusImageTag = "${NEXUS_URL}${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                    def nexusRepositoryTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
                     
                     // Pull the image from Nexus
-                    sh "docker pull ${nexusImageTag}"
+                    sh "docker pull ${nexusRepositoryTag}"
                 }
             }
         }
@@ -66,10 +65,10 @@ pipeline {
         stage('Run Docker Container from Nexus Image') {
             steps {
                 script {
-                    def nexusImageTag = "${NEXUS_URL}${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                    def nexusRepositoryTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
                     
                     // Run the pulled image
-                    sh "docker run -d --name my-httpd -p 83:80 ${nexusImageTag}"
+                    sh "docker run -d --name my-httpd -p 83:80 ${nexusRepositoryTag}"
                 }
             }
         }
