@@ -29,12 +29,6 @@ pipeline {
             }
         }
 
-        stage('Show Docker Images in Local Repository') {
-            steps {
-                sh 'docker images'
-            }
-        }
-
         stage('Remove Docker Image from Local Repository') {
             steps {
                 script {
@@ -44,12 +38,6 @@ pipeline {
                     // Remove local image
                     sh "docker rmi ${dockerImageTag} ${nexusImageTag}"
                 }
-            }
-        }
-
-        stage('Show Docker Images after RM') {
-            steps {
-                sh 'docker images'
             }
         }
 
@@ -64,12 +52,13 @@ pipeline {
             }
         }
 
-        stage('Stop and Remove Old Container') {
+        stage('Stop and Remove Old Container and Image') {
             steps {
                 script {
                     // Stop and remove the old container if it exists
                     sh "docker stop my-httpd || true"
                     sh "docker rm my-httpd || true"
+                    sh "docker rmi ${DOCKER_IMAGE_NAME}"
                 }
             }
         }
@@ -89,8 +78,6 @@ pipeline {
     post {
         always {
             echo 'Pipeline completed.'
-            // Optionally, clean up any containers still running
-            // sh 'docker rm -f my-httpd-container || true'
         }
     }
 }
