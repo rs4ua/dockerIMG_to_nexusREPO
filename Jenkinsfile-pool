@@ -10,20 +10,6 @@ pipeline {
     }
 
     stages {
-        stage('Remove Previous Docker Image') {
-            steps {
-                script {
-                    def previousDockerImageTag = "${DOCKER_IMAGE_NAME}:${PREVIOUS_DOCKER_IMAGE_VERSION}"
-                    def previousNexusImageTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${previousDockerImageTag}"
-
-                    // Attempt to remove the previous image if it exists
-                    sh """
-                      docker rmi ${previousDockerImageTag} || true
-                      docker rmi ${previousNexusImageTag} || true
-                    """
-                }
-            }
-        }
 
         stage('Create and Send Docker Image to Nexus') {
             steps {
@@ -63,6 +49,16 @@ pipeline {
                     
                     // Remove local image
                     sh "docker rmi ${dockerImageTag} ${NEXUS_URL}/${NEXUS_REPOSITORY}/${dockerImageTag}"
+                }
+            }
+        }
+
+        stage('Remove Previous Docker Image') {
+            steps {
+                script {
+                    def previousNexusImageTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${previousDockerImageTag}"
+
+                    sh "docker rmi ${previousNexusImageTag} || true"
                 }
             }
         }
