@@ -1,36 +1,28 @@
 pipeline {
-    agent { label 'local-agent' }   // Specify the local agent
+    agent { label 'local-agent' }
 
     environment {
         DOCKER_IMAGE_NAME = 'httpd'
-        DOCKER_IMAGE_VERSION = "1.${env.BUILD_NUMBER}"  // Use build number as the version/tag
+        DOCKER_IMAGE_VERSION = "1.${env.BUILD_NUMBER}"
         NEXUS_URL = '192.168.1.72:8082/repository/docker-host/'
     }
 
     stages {
-
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
-                    sh "docker build -t ${dockerImageTag} ."
-                }
-            }
-        }
-
-        stage('Send Image to Nexus') {
+        stage('Docker Build and Send Image to Nexus') {
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'nexusCredential', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                        def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                        def nexusImageTag = "${NEXUS_URL}${dockerImageTag}"
+                        
                         // Login to Nexus Docker registry
                         sh "echo ${NEXUS_PASSWORD} | docker login ${NEXUS_URL} -u ${NEXUS_USERNAME} --password-stdin"
                         
-                        // Tag and push the image to Nexus
-                        def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
-                        def nexusImageTag = "${NEXUS_URL}${dockerImageTag}"
+                        // Build and push the image to Nexus
                         sh """
-                            docker tag ${dockerImageTag} ${nexusImageTag}
-                            docker push ${nexusImageTag}
+                          docker build -t ${dockerImageTag} .
+                          docker tag ${dockerImageTag} ${nexusImageTag}
+                          docker push ${nexusImageTag}
                         """
                     }
                 }
@@ -62,6 +54,8 @@ pipeline {
                 script {
                     def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
                     def nexusImageTag = "${NEXUS_URL}${dockerImageTag}"
+                    
+                    // Remove local and remote image
                     sh """
                         docker rmi ${dockerImageTag} ${nexusImageTag}
                     """
@@ -73,6 +67,8 @@ pipeline {
     post {
         always {
             echo 'Pipeline completed.'
+            // Optionally, clean up any containers still running
+            sh 'docker rm -f my-httpd-container || true'
         }
     }
 }
