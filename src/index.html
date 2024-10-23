@@ -12,7 +12,7 @@ function Elastic()
     else if ((sizes.pos > sizes.length - 2) || (0 == sizes.pos))
     el.direction *= -1
     el.style.letterSpacing = sizes[sizes.pos += el.direction]
-setTimeout ('Elastic()', 100)
+    setTimeout ('Elastic()', 100)
 }
 </SCRIPT>
 <BODY bgcolor="gray" onLoad=Elastic()>
@@ -20,12 +20,11 @@ setTimeout ('Elastic()', 100)
 <br><br><br><br>
 <br><br><br><br>
 <font color="gold">Stand with Ukraine<br> 
-<font color="blue"><h2>This COOL WebServer from backen</h2>
+<font color="blue"><h2>This COOL WebServer from backend</h2>
 <font color="gold"><H2 ID="elastic" ALIGN="Center">~ ~ ~MYBACKEND-1~ ~ ~</H2>
-<img src="ukraine.png" width = 200 height = 120><br>
-<img src="usa.png" width = 200 height = 120><img src="canada.png" width = 200 height = 120><br>
-<img src="england.png" width = 200 height = 120><img src="australia.png" width = 200 height = 120><br>
-Version 1.0<br>
-
-</body>
+<img src="ukraine.png" width=200 height=120><br>
+<img src="usa.png" width=200 height=120><img src="canada.png" width=200 height=120><br>
+<img src="england.png" width=200 height=120><img src="australia.png" width=200 height=120><br>
+Version {{DOCKER_IMAGE_VERSION}}<br>
+</BODY>
 </HTML>
