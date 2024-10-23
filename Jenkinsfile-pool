@@ -43,13 +43,13 @@ pipeline {
 //        }
 //
 //        stage('Remove Docker Image from Local Repository') {
- //           steps {
+//           steps {
 //                script {
 //                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
 //                    
 //                    // Remove local image
 //                    sh "docker rmi ${dockerImageTag}"
- //               }
+//               }
 //            }
 //        }
 //
@@ -62,7 +62,7 @@ pipeline {
 //                }
 //            }
 //        }
-
+//
 //        stage('Pull Image from Nexus') {
 //            steps {
 //                script {
@@ -78,7 +78,7 @@ pipeline {
 //            steps {
 //                script {
 //                    def nexusRepositoryTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
- //                   
+//                   
 //                    // Run the pulled image
 //                    sh "docker run -d --name my-httpd -p 83:80 ${nexusRepositoryTag}"
 //                }
