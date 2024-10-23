@@ -8,7 +8,7 @@ pipeline {
     }
 
     stages {
-        stage('Docker Build and Send Image to Nexus') {
+        stage('Create and Send Docker Image to Nexus') {
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'nexusCredential', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
@@ -29,36 +29,42 @@ pipeline {
             }
         }
 
-        stage('Show Docker Images') {
+        stage('Show Docker Images in Local Repository') {
             steps {
                 sh 'docker images'
             }
         }
 
-        stage('Run Docker Image from Nexus') {
+        stage('Remove Docker Image from Local Repository') {
+            steps {
+                script {
+                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                    def nexusImageTag = "${NEXUS_URL}${dockerImageTag}"
+                    
+                    // Remove local image
+                    sh "docker rmi ${dockerImageTag} ${nexusImageTag}"
+                }
+            }
+        }
+
+        stage('Pull Image from Nexus') {
             steps {
                 script {
                     def nexusImageTag = "${NEXUS_URL}${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
                     
                     // Pull the image from Nexus
                     sh "docker pull ${nexusImageTag}"
-                    
-                    // Run the pulled image
-                    sh "docker run -d --name my-httpd-container -p 83:80 ${nexusImageTag}"
                 }
             }
         }
 
-        stage('Remove Created Docker Image') {
+        stage('Run Docker Container from Nexus Image') {
             steps {
                 script {
-                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
-                    def nexusImageTag = "${NEXUS_URL}${dockerImageTag}"
+                    def nexusImageTag = "${NEXUS_URL}${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
                     
-                    // Remove local and remote image
-                    sh """
-                        docker rmi ${dockerImageTag} ${nexusImageTag}
-                    """
+                    // Run the pulled image
+                    sh "docker run -d --name my-httpd-container -p 83:80 ${nexusImageTag}"
                 }
             }
         }
