@@ -1,0 +1,134 @@
+pipeline {
+    agent { label 'local-agent' }
+
+    environment {
+        DOCKER_IMAGE_NAME = 'httpd'
+        DOCKER_IMAGE_VERSION = "1.${env.BUILD_NUMBER}"
+        PREVIOUS_DOCKER_IMAGE_VERSION = "1.${env.BUILD_NUMBER.toInteger() - 1}"
+        NEXUS_URL = '192.168.1.72:8082'
+        NEXUS_REPOSITORY = 'repository/docker-host'
+    }
+
+    stages {
+
+        stage('Create and Send Docker Image to Nexus') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'nexusCredential', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                        def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                        def nexusRepositoryTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${dockerImageTag}"
+                        
+                        // Login to Nexus Docker registry
+                        sh "echo ${NEXUS_PASSWORD} | docker login ${NEXUS_URL} -u ${NEXUS_USERNAME} --password-stdin"
+                        
+                        // Build and push the image to Nexus
+                        sh """
+                          docker build --no-cache -t ${dockerImageTag} .
+                          docker tag ${dockerImageTag} ${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}
+                          docker push ${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Stop and Remove Old Container and Image') {
+            steps {
+                script {
+                    // Stop and remove the old container if it exists
+                    sh "docker stop my-httpd || true"
+                    sh "docker rm my-httpd || true"
+                }
+            }
+        }
+
+        stage('Remove Docker Image from Local Repository') {
+           steps {
+                script {
+                    def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                    def dockerNexusImageTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${dockerImageTag}"
+
+                    // Remove local image
+                    sh "docker rmi ${dockerImageTag}"
+                    sh "docker rmi ${dockerNexusImageTag}"
+               }
+            }
+        }
+
+        stage('Remove Previous Docker Image') {
+            steps {
+                script {
+                    def dockerPreviosImageTag = "${DOCKER_IMAGE_NAME}:${PREVIOUS_DOCKER_IMAGE_VERSION}"
+                    def previousNexusImageTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${dockerPreviosImageTag}"
+
+                    sh "docker rmi ${previousNexusImageTag} || true"
+                }
+            }
+        }
+
+        stage('Pull Image from Nexus') {
+            steps {
+                script {
+                   def nexusRepositoryTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                    
+                    // Pull the image from Nexus
+                    sh "docker pull ${nexusRepositoryTag}"
+                }
+            }
+        }
+
+        stage('Run Docker Container from Nexus Image') {
+            steps {
+                script {
+                    def nexusRepositoryTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
+                   
+                    // Run the pulled image
+                    sh "docker run -d --name my-httpd -p 83:80 ${nexusRepositoryTag}"
+                }
+            }
+        }
+
+        stage('Clean up old Docker images in Nexus') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'nexusCredential', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                        // Get the list of Docker images from Nexus repository
+                        def nexusResponse = sh(script: """
+                          curl -s -u ${NEXUS_USERNAME}:${NEXUS_PASSWORD} \
+                          "${NEXUS_URL}/service/rest/v1/search?repository=${NEXUS_REPOSITORY}&format=docker" \
+                          | jq -r '.items | sort_by(.version) | reverse | .[].id'
+                        """, returnStdout: true).trim()
+
+                        // Split the response into a list
+                        def imageList = nexusResponse.split("\n")
+                        
+                        // Define how many images to keep (e.g., last 5)
+                        def imagesToKeep = 5
+                        
+                        // Check if there are more images than the limit
+                        if (imageList.size() > imagesToKeep) {
+                            def imagesToDelete = imageList.drop(imagesToKeep) // Drop the first 5 (keep them), delete the rest
+                            
+                            // Loop through and delete the old images
+                            imagesToDelete.each { imageId ->
+                                echo "Deleting image with componentId: ${imageId}"
+                                sh """
+                                  curl -u ${NEXUS_USERNAME}:${NEXUS_PASSWORD} \
+                                  -X DELETE "${NEXUS_URL}/service/rest/v1/components/${imageId}"
+                                """
+                            }
+                        } else {
+                            echo "No images to delete, total images: ${imageList.size()}"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline completed.'
+        }
+    }
+}
