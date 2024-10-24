@@ -2,35 +2,34 @@ pipeline {
     agent { label 'local-agent' }
 
     environment {
-        DOCKER_IMAGE_NAME = 'httpd'
-        DOCKER_IMAGE_VERSION = "1.${env.BUILD_NUMBER}"
-        PREVIOUS_DOCKER_IMAGE_VERSION = "1.${env.BUILD_NUMBER.toInteger() - 1}"
         NEXUS_URL = '192.168.1.72:8082'
         NEXUS_REPOSITORY = 'repository/docker-host'
     }
 
     stages {
-        stage('Create and Send Docker Image to Nexus') {
+        stage('Clean up Old Docker Images in Nexus') {
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'nexusCredential', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
-                        def dockerImageTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}"
-                        def nexusRepositoryTag = "${NEXUS_URL}/${NEXUS_REPOSITORY}/${dockerImageTag}"
-                        
-                        // Secure login to Nexus Docker registry
+                        // Get the list of Docker images, sorted by version, and delete old ones
                         sh """
-                          echo \$NEXUS_PASSWORD | docker login ${NEXUS_URL} -u \$NEXUS_USERNAME --password-stdin
-                        """
-                        
-                        // Build and push the image to Nexus
-                        sh """
-                          docker build --no-cache -t ${dockerImageTag} .
-                          docker tag ${dockerImageTag} ${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}
-                          docker push ${NEXUS_URL}/${NEXUS_REPOSITORY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION}
+                          curl -s -u \$NEXUS_USERNAME:\$NEXUS_PASSWORD \
+                          ${NEXUS_URL}/service/rest/v1/search?repository=${NEXUS_REPOSITORY}&format=docker \
+                          | jq -r '.items | sort_by(.version) | reverse | .[5:] | .[].id' \
+                          | while read id; do
+                              curl -X DELETE -u \$NEXUS_USERNAME:\$NEXUS_PASSWORD \
+                              ${NEXUS_URL}/service/rest/v1/components/\$id;
+                            done
                         """
                     }
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            echo 'Cleanup completed.'
         }
     }
 }
